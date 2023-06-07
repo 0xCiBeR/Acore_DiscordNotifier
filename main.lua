@@ -1,56 +1,49 @@
 --[[
-    Discord Notifier for AzerothCore & ElunaEngine
-    Created by: 0xCiBeR(https://github.com/0xCiBeR)
-]]--
+    DiscordWebhookIntegration
 
---[[
+    This script contains the necessary configuration and functions for Discord integration with a game server.
+    It's primarily used to send chat events from the game server to a specified Discord channel.
+    Supported events include: general chat, whispers, group chat, and guild chat.
 
-    Config Flags Section -> EDIT TO YOUR LIKING!!
+    When using this script, it's important to set the global Discord webhook.
+    If specific webhooks are not set for a certain type of event, the global webhook will be used instead.
+    It's also possible to disable certain types of events by changing values in the eventOn table.
 
-]]--
+    Author: 0xCiBeR(https://github.com/0xCiBeR)
+--]]
 
-Config = {}
-Config.hooks = {}
-Config.eventOn = {}
--- By default, users are notified if any of the events are sent to Discord. Do you really want to disable this?
-Config.privacyWarning = true 
+-- Config Flags Section -> EDIT TO YOUR LIKING!!
 
--- This is the global Discord Webhook to use if other specific Webhooks are not defined. IMPORTANT: Must always be defined since its used as fallback
-Config.hooks.globalWebook = "https://discord.com/api/webhooks/............."
--- Webhook to send OnChat events
-Config.hooks.PLAYER_EVENT_ON_CHAT = nil
--- Webhook to send OnWhisperChat events
-Config.hooks.PLAYER_EVENT_ON_WHISPER = nil
--- Webhook to send OnGroupChat events
-Config.hooks.PLAYER_EVENT_ON_GROUP_CHAT = nil
--- Webhook to send OnGuildChat events
-Config.hooks.PLAYER_EVENT_ON_GUILD_CHAT = nil
+Config = {
+    hooks = {},
+    eventOn = {},
+    privacyWarning = true,
+    hooks = {
+        globalWebook = "https://discord.com/api/webhooks/.............",
+        PLAYER_EVENT_ON_CHAT = nil,
+        PLAYER_EVENT_ON_WHISPER = nil,
+        PLAYER_EVENT_ON_GROUP_CHAT = nil,
+        PLAYER_EVENT_ON_GUILD_CHAT = nil,
+    },
+    eventOn = {
+        PLAYER_EVENT_ON_CHAT = true,
+        PLAYER_EVENT_ON_WHISPER = true,
+        PLAYER_EVENT_ON_GROUP_CHAT = true,
+        PLAYER_EVENT_ON_GUILD_CHAT = true,
+    }
+}
 
--- Feature Flag for enabiling each event
-Config.eventOn.PLAYER_EVENT_ON_CHAT = true
-Config.eventOn.PLAYER_EVENT_ON_WHISPER = true
-Config.eventOn.PLAYER_EVENT_ON_GROUP_CHAT = true
-Config.eventOn.PLAYER_EVENT_ON_GUILD_CHAT = true
+-- Event Mappings Section -- DO NOT TOUCH!!
 
---[[
+local events = {
+    PLAYER_EVENT_ON_CHAT = 18,
+    PLAYER_EVENT_ON_WHISPER = 19,
+    PLAYER_EVENT_ON_GROUP_CHAT = 20,
+    PLAYER_EVENT_ON_GUILD_CHAT = 21,
+    PLAYER_EVENT_ON_LOGIN = 3,
+}
 
-    Event Mappings Section -- DO NOT TOUCH!!
-
-]]--
-
-local PLAYER_EVENT_ON_CHAT = 18
-local PLAYER_EVENT_ON_WHISPER = 19
-local PLAYER_EVENT_ON_GROUP_CHAT = 20
-local PLAYER_EVENT_ON_GUILD_CHAT = 21
-
--- Misc
-local PLAYER_EVENT_ON_LOGIN = 3
-
---[[
-
-    Utility Function Section -- DO NOT TOUCH!!
-
-]]--
+-- Utility Function Section -- DO NOT TOUCH!!
 
 local function sendToDiscord(event, msg)
     if msg and event then
@@ -64,29 +57,23 @@ local function sendToDiscord(event, msg)
     end
 end
 
---[[
+-- Events Section -- DO NOT TOUCH!!
 
-    Events Section -- DO NOT TOUCH!!
-
-]]--
-
--- OnChat
-local function OnChat(event, player, msg, Type, lang)
-    if Config.eventOn.PLAYER_EVENT_ON_CHAT then
+local function OnChat(event, player, msg)
+    if Config.eventOn[event] then
         local name = player:GetName()
         local guid = player:GetGUIDLow()
-        sendToDiscord("PLAYER_EVENT_ON_CHAT", '__CHAT__ -> **|'..guid..'| '..name..'**: '..msg)
+        sendToDiscord(event, '__CHAT__ -> **|'..guid..'| '..name..'**: '..msg)
     end
 end
 
--- OnWhisperChat
 local function OnWhisperChat(event, player, msg, Type, lang, receiver)
-    if Config.eventOn.PLAYER_EVENT_ON_WHISPER then
+    if Config.eventOn[event] then
         local sName = player:GetName()
         local sGuid = player:GetGUIDLow()
         local rName = receiver:GetName()
         local rGuid = receiver:GetGUIDLow()
-        sendToDiscord("PLAYER_EVENT_ON_WHISPER", '__WHISPER__ -> **|'..sGuid..'| '..sName..' -> |'..rGuid..'| '..rName..'**: '..msg)
+        sendToDiscord(event, '__WHISPER__ -> **|'..sGuid..'| '..sName..' -> |'..rGuid..'| '..rName..'**: '..msg)
     end
 end
 
@@ -98,9 +85,8 @@ local function OnGroupChat(event, player, msg, Type, lang, group)
     local leader = GetPlayerByGUID(leaderGuid)
     local lName = leader:GetName()
     local lGuidLow = leader:GetGUIDLow()
-    sendToDiscord("PLAYER_EVENT_ON_GROUP_CHAT", '__GROUP CHAT__ -> **|'..guid..'| '..name..'**: '..msg..' **[LEADER -> '..lName..'('..lGuidLow..')]**')
+    sendToDiscord(event, '__GROUP CHAT__ -> **|'..guid..'| '..name..'**: '..msg..' **[LEADER -> '..lName..'('..lGuidLow..')]**')
 end
-
 
 -- OnGuildChat
 local function OnGuildChat(event, player, msg, Type, lang, guild)
@@ -108,38 +94,41 @@ local function OnGuildChat(event, player, msg, Type, lang, guild)
     local guid = player:GetGUIDLow()
     local gName = guild:GetName()
     local gId = guild:GetId()
-    sendToDiscord("PLAYER_EVENT_ON_GUILD_CHAT", '__GUILD__ -> **[ |'..gId..'| -> '..gName..'] |'..guid..'| '..name..'**: '..msg)
+    sendToDiscord(event, '__GUILD__ -> **[ |'..gId..'| -> '..gName..'] |'..guid..'| '..name..'**: '..msg)
 end
 
---[[
+-- Register Events Section -- DO NOT TOUCH!!
 
-    Register Events Section -- DO NOT TOUCH!!
+RegisterPlayerEvent(events.PLAYER_EVENT_ON_CHAT, OnChat)
+RegisterPlayerEvent(events.PLAYER_EVENT_ON_WHISPER, OnWhisperChat)
+RegisterPlayerEvent(events.PLAYER_EVENT_ON_GROUP_CHAT, OnGroupChat)
+RegisterPlayerEvent(events.PLAYER_EVENT_ON_GUILD_CHAT, OnGuildChat)
 
-]]--
--- OnChat
-RegisterPlayerEvent(PLAYER_EVENT_ON_CHAT, OnChat)
--- OnWhisperChat
-RegisterPlayerEvent(PLAYER_EVENT_ON_WHISPER, OnWhisperChat)
--- OnGroupChat
-RegisterPlayerEvent(PLAYER_EVENT_ON_GROUP_CHAT, OnGroupChat)
--- OnGuildChat
-RegisterPlayerEvent(PLAYER_EVENT_ON_GUILD_CHAT, OnGuildChat)
+-- MISC -- DO NOT TOUCH!!
 
-
---[[
-
-    MISC -- DO NOT TOUCH!!
-
-]]--
+local messages = {
+    [0] = "|cff00ff00[PRIVACY NOTICE] |cffff0000THIS SERVER IS CURRENTLY MONITORING AND FORWARDING TEXT MESSAGES SENT WITHIN THE SERVER TO DISCORD.",  -- enUS
+    [1] = "|cff00ff00[개인정보 보호 알림] |cffff0000이 서버는 현재 서버 내에서 보낸 텍스트 메시지를 모니터링하고 DISCORD로 전달하고 있습니다.",  -- koKR
+    [2] = "|cff00ff00[AVIS DE CONFIDENTIALITÉ] |cffff0000CE SERVEUR SURVEILLE ACTUELLEMENT ET TRANSFÈRE LES MESSAGES TEXTUELS ENVOYÉS DANS LE SERVEUR VERS DISCORD.",  -- frFR
+    [3] = "|cff00ff00[DATENSCHUTZHINWEIS] |cffff0000DIESE SERVER ÜBERWACHT UND LEITET DERZEIT TEXTNACHRICHTEN WEITER, DIE INNERHALB DES SERVERS AN DISCORD GESCHICKT WERDEN.",  -- deDE
+    [4] = "|cff00ff00[隐私声明] |cffff0000本服务器目前正在监控并转发在服务器内发送的文本消息至Discord。",  -- zhCN
+    [5] = "|cff00ff00[隱私聲明] |cffff0000本伺服器目前正在監視並轉寄伺服器內發送的文字訊息至Discord。",  -- zhTW
+    [6] = "|cff00ff00[AVISO DE PRIVACIDAD] |cffff0000ESTE SERVIDOR ESTÁ MONITORIZANDO Y REENVIANDO ACTUALMENTE LOS MENSAJES DE TEXTO ENVIADOS DENTRO DEL SERVIDOR A DISCORD.",  -- esES
+    [7] = "|cff00ff00[AVISO DE PRIVACIDAD] |cffff0000ESTE SERVIDOR ESTÁ MONITORIZANDO Y REENVIANDO ACTUALMENTE LOS MENSAJES DE TEXTO ENVIADOS DENTRO DEL SERVIDOR A DISCORD.",  -- esMX
+    [8] = "|cff00ff00[УВЕДОМЛЕНИЕ О КОНФИДЕНЦИАЛЬНОСТИ] |cffff0000ЭТОТ СЕРВЕР В НАСТОЯЩЕЕ ВРЕМЯ ОТСЛЕЖИВАЕТ И ПЕРЕНАПРАВЛЯЕТ ТЕКСТОВЫЕ СООБЩЕНИЯ, ОТПРАВЛЕННЫЕ ВНУТРИ СЕРВЕРА, В DISCORD.",  -- ruRU
+}
 
 local function privacyAlert(event, player)
     if Config.privacyWarning then
         for i, v in pairs(Config.eventOn) do
             if v == true then
-                player:SendBroadcastMessage("|cff00ff00[PRIVACY NOTICE] |cffff0000THIS SERVER IS CURRENTLY MONITORING AND FORWARDING TEXT MESSAGES SENT WITHIN THE SERVER TO DISCORD.")
+                local language = player:GetSession():GetSessionDbLocaleIndex() 
+                local message = messages[language] or messages[0] -- use English as default if preferred language not found
+                player:SendBroadcastMessage(message)
                 break
             end
         end
     end
 end
-RegisterPlayerEvent(PLAYER_EVENT_ON_LOGIN, privacyAlert)
+
+RegisterPlayerEvent(events.PLAYER_EVENT_ON_LOGIN, privacyAlert)
